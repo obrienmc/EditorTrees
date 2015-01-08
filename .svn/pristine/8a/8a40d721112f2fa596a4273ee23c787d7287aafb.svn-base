@@ -1,0 +1,251 @@
+package editortrees;
+
+// A node in a height-balanced binary tree with rank.
+// Except for the NULL_sNODE (if you choose to use one), one node cannot
+// belong to two different trees.
+
+public class Node {
+	public static final Node NULL_NODE = new NullNode();
+
+	enum Code {
+		SAME, LEFT, RIGHT
+	};
+
+	// The fields would normally be private, but for the purposes of this class,
+	// we want to be able to test the results of the algorithms in addition to
+	// the
+	// "publicly visible" effects
+
+	char element;
+	Node left, right;
+	Node parent; // subtrees
+	int rank; // inorder position of this node within its own subtree.
+	int height;
+	int size;
+	Code balance;
+
+	public Node(char e, Node parent) {
+		this.element = e;
+		this.left = NULL_NODE;
+		this.right = NULL_NODE;
+		this.balance = Code.SAME;
+		this.parent = parent;
+		this.height = 0;
+		this.size = 1;
+		this.rank = 0;
+	}
+
+	public Node(char e) {
+		this.element = e;
+		this.left = NULL_NODE;
+		this.right = NULL_NODE;
+		this.balance = Code.SAME;
+		this.parent = NULL_NODE;
+		this.height = 0;
+		this.size = 1;
+		this.rank = 0;
+	}
+
+	public Node() {
+		this.element = Character.MIN_VALUE;
+		this.rank = Integer.MIN_VALUE;
+		this.size = 0;
+		this.balance = Code.SAME;
+		this.height = -1;
+		this.left = null;
+		this.right = null;
+		this.parent = NULL_NODE;
+	}
+
+	// Node parent; // You may want this field.
+	// Feel free to add other fields that you find useful
+
+	// You will probably want to add several other methods
+
+	// For the following methods, you should fill in the details so that they
+	// work correctly
+	public String toString() {
+		if (this == NULL_NODE) {
+			return "";
+		}
+		return this.left.toString() + this.element + this.right.toString();
+	}
+
+	public int height() {
+		return this.height;
+	}
+
+	public int size() {
+		return this.size;
+	}
+
+	public Node get(int pos) {
+		if (pos > this.rank) { // go right
+			return this.right.get(pos - rank - 1);
+		} else if (pos < this.rank) { // go left
+			return this.left.get(pos);
+		} else {
+			return this;
+		}
+	}
+
+	public void add(char c, int pos) {
+		if (pos > this.rank) { // go right
+			if (this.right == NULL_NODE) {
+				this.right = new Node(c, this);
+			} else {
+				this.right.add(c, pos - rank - 1);
+			}
+			int rotate = needsRotation();
+			switch (rotate) {
+			case (-2):
+				doubleLeftRotate(this, this.right, this.right.left);
+				break;
+			case (-1):
+				singleLeftRotate(this, this.right);
+				break;
+			case (0):
+				setFieldNoRotate();
+				break;
+			case (1):
+				singleRightRotate(this, this.left);
+				break;
+			case (2):
+				doubleRightRotate(this, this.left, this.left.right);
+				break;
+			}
+		} else { // go left
+			if (this.left == NULL_NODE) {
+				this.left = new Node(c, this);
+			} else {
+				this.left.add(c, pos);
+			}
+			int rotate = needsRotation();
+			switch (rotate) {
+			case (-2):
+				doubleLeftRotate(this, this.right, this.right.left);
+				break;
+			case (-1):
+				singleLeftRotate(this, this.right);
+				break;
+			case (0):
+				this.rank++;
+				setFieldNoRotate();
+				break;
+			case (1):
+				singleRightRotate(this, this.left);
+				break;
+			case (2):
+				doubleRightRotate(this, this.left, this.left.right);
+				break;
+			}
+		}
+	}
+
+	private void setFieldNoRotate() {
+		this.setHeight();
+		this.setSize();
+		this.setBalance();
+
+	}
+
+	private void setBalance() {
+		if (this.left.height > this.right.height) {
+			this.balance = Code.LEFT;
+		} else if (this.left.height < this.right.height) {
+			this.balance = Code.RIGHT;
+		} else {
+			this.balance = Code.SAME;
+		}
+	}
+
+	private void setHeight() {
+		this.height = Math.max(this.left.height, this.right.height) + 1;
+	}
+
+	private void setSize() {
+		this.size = this.left.size + this.right.size + 1;
+	}
+	
+	private void setRank() {
+		this.rank = this.left.size;
+	}
+
+	private void doubleRightRotate(Node parent, Node child, Node grandchild) {
+		singleLeftRotate(child, grandchild);
+		singleRightRotate(parent, child);
+		
+		grandchild.setFieldsAfterRotate();
+		child.setFieldsAfterRotate();
+		parent.setFieldsAfterRotate();
+	}
+
+	private void singleRightRotate(Node parent, Node child) {
+		char parentElement = parent.element;
+		parent.element = child.element;
+		child.element = parentElement;
+		Node childSubtree = child.right;
+		child.right = parent.right;
+		parent.right = child;
+		parent.left = child.left;
+		child.left.parent = parent;
+		child.left = childSubtree;
+		
+		child.setFieldsAfterRotate();
+		parent.setFieldsAfterRotate();
+		EditTree.setTotalRotationCount(EditTree.getTotalRotationCount() + 1);
+	}
+
+	private void singleLeftRotate(Node parent, Node child) {
+		char parentElement = parent.element;
+		parent.element = child.element;
+		child.element = parentElement;
+		Node childSubtree = child.left;
+		child.left = parent.left;
+		parent.left = child;
+		parent.right = child.right;
+		child.right.parent = parent;
+		child.right = childSubtree;
+		
+		child.setFieldsAfterRotate();
+		parent.setFieldsAfterRotate();
+		EditTree.setTotalRotationCount(EditTree.getTotalRotationCount() + 1);
+	}
+
+	private void doubleLeftRotate(Node parent, Node child, Node grandchild) {
+		singleRightRotate(child, grandchild);
+		singleLeftRotate(parent, child);
+		
+		grandchild.setFieldsAfterRotate();
+		child.setFieldsAfterRotate();
+		parent.setFieldsAfterRotate();
+	}
+
+	private void setFieldsAfterRotate() {
+		this.setBalance();
+		this.setHeight();
+		this.setSize();
+		this.setRank();
+	}
+
+	private int needsRotation() {
+		if (this.left.height - this.right.height > 1) {
+			// rotate right
+			if (this.left.balance == Code.LEFT) {
+				return 1;
+			} else {
+				return 2;
+			}
+		} else if (this.right.height - this.left.height > 1) {
+			// rotate left
+			if (this.right.balance == Code.RIGHT) {
+				return -1;
+			} else {
+				return -2;
+			}
+		} else {
+			return 0;
+		}
+	}
+
+}

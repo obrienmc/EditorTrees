@@ -1,0 +1,274 @@
+package editortrees;
+
+// A height-balanced binary tree with rank that could be the basis for a text editor.
+
+public class EditTree {
+
+	public Node root;
+	private int size;
+	int totalRotationCount;
+
+	/**
+	 * Construct an empty tree
+	 */
+	public EditTree() {
+		this.root = Node.NULL_NODE;
+		this.size = 0;
+		this.totalRotationCount = 0;
+	}
+
+	/**
+	 * Construct a single-node tree whose element is c
+	 * 
+	 * @param c
+	 */
+	public EditTree(char c) {
+		this.root = new Node(c);
+		this.size = 1;
+		this.totalRotationCount = 0;
+	}
+
+	/**
+	 * Create an EditTree whose toString is s. This can be done in O(N) time,
+	 * where N is the length of the tree (repeatedly calling insert() would be
+	 * O(N log N), so you need to find a more efficient way to do this.
+	 * 
+	 * @param s
+	 */
+	public EditTree(String s) {
+
+	}
+
+	/**
+	 * Make this tree be a copy of e, with all new nodes, but the same shape and
+	 * contents.
+	 * 
+	 * @param e
+	 */
+	public EditTree(EditTree e) {
+		if (e.root != Node.NULL_NODE) {
+			this.root = new Node();
+			this.root.editTreeCopy(e, e.root);
+			this.size = e.size;
+			this.totalRotationCount = e.totalRotationCount;
+		} else {
+			this.root = Node.NULL_NODE;
+			this.size = 0;
+			this.totalRotationCount = 0;
+		}
+
+	}
+
+	/**
+	 * 
+	 * @return the height of this tree
+	 */
+	public int height() {
+		return this.root.height; // replace by a real calculation.
+	}
+
+	/**
+	 * 
+	 * returns the total number of rotations done in this tree since it was
+	 * created. A double rotation counts as two.
+	 * 
+	 * @return number of rotations since tree was created.
+	 */
+	public int totalRotationCount() {
+		return this.totalRotationCount;
+	}
+
+	/**
+	 * return the string produced by an inorder traversal of this tree
+	 */
+	@Override
+	public String toString() {
+		if (this.root == Node.NULL_NODE) {
+			return "";
+		}
+		return this.root.toString();
+	}
+
+	/**
+	 * 
+	 * @param pos
+	 *            position in the tree
+	 * @return the character at that position
+	 * @throws IndexOutOfBoundsException
+	 */
+	public char get(int pos) throws IndexOutOfBoundsException {
+		if (pos < 0 || pos >= this.size || this.root == Node.NULL_NODE) {
+			throw new IndexOutOfBoundsException();
+		}
+		return this.root.get(pos).element;
+	}
+
+	/**
+	 * 
+	 * @param c
+	 *            character to add to the end of this tree.
+	 */
+	public void add(char c) {
+		if (this.root == Node.NULL_NODE) {
+			this.root = new Node(c);
+			this.size++;
+		} else {
+			this.add(c, this.size);
+		}
+	}
+
+	/**
+	 * 
+	 * @param c
+	 *            character to add
+	 * @param pos
+	 *            character added in this inorder position
+	 * @throws IndexOutOfBoundsException
+	 *             id pos is negative or too large for this tree
+	 */
+	public void add(char c, int pos) throws IndexOutOfBoundsException {
+		if (pos < 0 || pos > this.size) {
+			throw new IndexOutOfBoundsException();
+		}
+		if (this.root == Node.NULL_NODE) {
+			this.root = new Node(c);
+		} else {
+			this.root.add(c, pos, this);
+		}
+		this.size++;
+	}
+
+	/**
+	 * 
+	 * @return the number of nodes in this tree
+	 */
+	public int size() {
+		return this.size; // replace by a real calculation.
+	}
+
+	/**
+	 * 
+	 * @param pos
+	 *            position of character to delete from this tree
+	 * @return the character that is deleted
+	 * @throws IndexOutOfBoundsException
+	 */
+	public char delete(int pos) throws IndexOutOfBoundsException {
+		if (pos < 0 || pos >= this.size || this.root == Node.NULL_NODE) {
+			throw new IndexOutOfBoundsException();
+		}
+		return this.root.get(pos).delete(this);
+	}
+
+	/**
+	 * This method operates in O(length*log N), where N is the size of this
+	 * tree.
+	 * 
+	 * @param pos
+	 *            location of the beginning of the string to retrieve
+	 * @param length
+	 *            length of the string to retrieve
+	 * @return string of length that starts in position pos
+	 * @throws IndexOutOfBoundsException
+	 *             unless both pos and pos+length-1 are legitimate indexes
+	 *             within this tree.
+	 */
+	public String get(int pos, int length) throws IndexOutOfBoundsException {
+		return "";
+	}
+
+	/**
+	 * This method is provided for you, and should not need to be changed. If
+	 * split() and concatenate() are O(log N) operations as required, delete
+	 * should also be O(log N)
+	 * 
+	 * @param start
+	 *            position of beginning of string to delete
+	 * 
+	 * @param length
+	 *            length of string to delete
+	 * @return an EditTree containing the deleted string
+	 * @throws IndexOutOfBoundsException
+	 *             unless both start and start+length-1 are in range for this
+	 *             tree.
+	 */
+	public EditTree delete(int start, int length)
+			throws IndexOutOfBoundsException {
+		if (start < 0 || start + length >= this.size())
+			throw new IndexOutOfBoundsException(
+					(start < 0) ? "negative first argument to delete"
+							: "delete range extends past end of string");
+		EditTree t2 = this.split(start);
+		EditTree t3 = t2.split(length);
+		this.concatenate(t3);
+		return t2;
+	}
+
+	/**
+	 * Append (in time proportional to the log of the size of the larger tree)
+	 * the contents of the other tree to this one. Other should be made empty
+	 * after this operation.
+	 * 
+	 * @param other
+	 * @throws IllegalArgumentException
+	 *             if this == other
+	 */
+	public void concatenate(EditTree other) throws IllegalArgumentException {
+
+	}
+
+	/**
+	 * This operation must be done in time proportional to the height of this
+	 * tree.
+	 * 
+	 * @param pos
+	 *            where to split this tree
+	 * @return a new tree containing all of the elements of this tree whose
+	 *         positions are >= position. Their nodes are removed from this
+	 *         tree.
+	 * @throws IndexOutOfBoundsException
+	 */
+	public EditTree split(int pos) throws IndexOutOfBoundsException {
+		return null; // replace by a real calculation.
+	}
+
+	/**
+	 * Don't worry if you can't do this one efficiently.
+	 * 
+	 * @param s
+	 *            the string to look for
+	 * @return the position in this tree of the first occurrence of s; -1 if s
+	 *         does not occur
+	 */
+	public int find(String s) {
+		return -2;
+	}
+
+	/**
+	 * 
+	 * @param s
+	 *            the string to search for
+	 * @param pos
+	 *            the position in the tree to begin the search
+	 * @return the position in this tree of the first occurrence of s that does
+	 *         not occur before position pos; -1 if s does not occur
+	 */
+	public int find(String s, int pos) {
+		return -2;
+	}
+
+	/**
+	 * @return The root of this tree.
+	 */
+	public Node getRoot() {
+		return this.root;
+	}
+
+	// public static int getTotalRotationCount() {
+	// return this.totalRotationCount;
+	// }
+	//
+	// public static void setTotalRotationCount(int totalRotationCount) {
+	// EditTree.totalRotationCount = totalRotationCount;
+	// }
+}

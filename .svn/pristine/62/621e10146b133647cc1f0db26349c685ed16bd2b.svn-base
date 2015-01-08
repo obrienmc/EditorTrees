@@ -1,0 +1,425 @@
+package editortrees;
+
+import editortrees.Node.Code;
+
+// A height-balanced binary tree with rank that could be the basis for a text editor.
+
+public class EditTree {
+
+	private Node root;
+	private int rotationCount;
+
+	/**
+	 * Construct an empty tree
+	 */
+	public EditTree() {
+		this.root = null;
+		this.rotationCount = 0;
+	}
+
+	/**
+	 * Construct a single-node tree whose element is c
+	 * 
+	 * @param c
+	 */
+	public EditTree(char c) {
+		this.root = new Node(c, null, null, Code.SAME, null, true, true);
+		this.rotationCount = 0;
+		this.root.rank = 0;
+	}
+
+	/**
+	 * Create an EditTree whose toString is s. This can be done in O(N) time,
+	 * where N is the length of the tree (repeatedly calling insert() would be
+	 * O(N log N), so you need to find a more efficient way to do this.
+	 * 
+	 * @param s
+	 */
+	public EditTree(String s) {
+
+	}
+
+	/**
+	 * Make this tree be a copy of e, with all new nodes, but the same shape and
+	 * contents.
+	 * 
+	 * @param e
+	 */
+	public EditTree(EditTree e) {
+		// come back and fix this - this just points to old tree
+		this.root = e.root;
+		this.rotationCount = e.rotationCount;
+	}
+
+	/**
+	 * 
+	 * @return the height of this tree
+	 */
+	public int height() {
+		if (this.root == null) {
+			return -1;
+		}
+		return this.root.height();
+	}
+
+	/**
+	 * 
+	 * returns the total number of rotations done in this tree since it was
+	 * created. A double rotation counts as two.
+	 * 
+	 * @return number of rotations since tree was created.
+	 */
+	public int totalRotationCount() {
+		return this.rotationCount; // replace by a real calculation.
+	}
+
+	/**
+	 * return the string produced by an inorder traversal of this tree
+	 */
+	@Override
+	public String toString() {
+		String inOrder = "";
+		Node current = this.root;
+		while (current.left != null) {
+			current = current.left;
+		}
+		while (current != null && current.right != null) {
+			while (current != null
+					&& !(current.isRightThreaded == false && current.right.isLeftThreaded == false)) {
+				inOrder += (current.element + "");
+				current = current.right;
+			}
+			if (current != null) {
+				inOrder += (current.element + "");
+				current = current.right;
+				while (!current.isLeftThreaded) {
+					current = current.left;
+				}
+			}
+		}
+		return inOrder;
+	}
+
+	/**
+	 * 
+	 * @param pos
+	 *            position in the tree
+	 * @return the character at that position
+	 * @throws IndexOutOfBoundsException
+	 */
+	public char get(int pos) throws IndexOutOfBoundsException {
+		return '%';
+	}
+
+	/**
+	 * 
+	 * @param c
+	 *            character to add to the end of this tree.
+	 */
+	public void add(char c) {
+		if (this.root == null) {
+			root = new Node(c, null, null, Code.SAME, null, true, true);
+		} else {
+			Node current = this.root;
+			while (current.right != null) {
+				current = current.right;
+			}
+			current.right = new Node(c, current, null, Code.SAME, current,
+					true, true);
+			current.isRightThreaded = false;
+			current.balance = Code.RIGHT;
+			while (current.parent != null
+					&& current.parent.balance != Code.RIGHT) {
+				current = current.parent;
+				if (current.balance == Code.LEFT) {
+					current.balance = Code.SAME;
+				} else if (current.balance == Code.SAME) {
+					current.balance = Code.RIGHT;
+				}
+			}
+			if (current.parent != null) {
+				if (current.parent.parent == null) {
+					this.root = rotateLeft(current.parent, current);
+					this.root.balance = Code.SAME;
+					this.root.left.balance = Code.SAME;
+					this.root.left.parent = current;
+					
+				} else {
+					current.parent.parent.right = rotateLeft(current.parent,
+							current);
+					current.parent.right.balance = Code.SAME;
+					current.parent.right.left.balance = Code.SAME;
+				}
+			}
+
+		}
+	}
+
+	/**
+	 * 
+	 * @param parent
+	 */
+	private Node rotateLeft(Node parent, Node child) {
+		if (child.left != parent) {
+			parent.right = child.left;
+			child.rank++;
+		} else {
+			parent.right = child;
+			parent.isRightThreaded = true;
+		}
+		child.left = parent;
+		child.isLeftThreaded = false;
+		child.rank++;
+		this.rotationCount++;
+		if (child.parent.parent != null) {
+			child.parent = child.parent.parent;
+		} else {
+			child.parent = null;
+		}
+		return child;
+	}
+
+	/**
+	 * 
+	 * @param parent
+	 */
+	private Node rotateRight(Node parent, Node child) {
+		parent.left = child;
+		parent.isLeftThreaded = true;
+		parent.rank--;
+		child.right = parent;
+		child.isRightThreaded = false;
+		child.rank++;
+		this.rotationCount++;
+		if (child.parent.parent != null) {
+			child.parent = child.parent.parent;
+		} else {
+			child.parent = null;
+		}
+		return child;
+	}
+
+	/**
+	 * 
+	 * @param parent
+	 */
+	private void rotateDouble(Node parent, char direction) {
+		// TODO Auto-generated method stub
+
+	}
+
+	/**
+	 * 
+	 * @param c
+	 *            character to add
+	 * @param pos
+	 *            character added in this inorder position
+	 * @throws IndexOutOfBoundsException
+	 *             id pos is negative or too large for this tree
+	 */
+	public void add(char c, int pos) throws IndexOutOfBoundsException {
+		// update rotation count
+		// two booleans for left right found
+		Node current = root;
+		int index = current.rank;
+		boolean left = false;
+		int first = 0;
+		int second = 0;
+		boolean rotate = false;
+		while (!(current.isLeftThreaded && current.isRightThreaded)) {
+			if (pos > index) {
+				if (current.right != null) {
+					current = current.right;
+					index += current.rank + 1;
+					left = false;
+				}
+			} else if (pos < index) {
+				if (current.left != null) {
+					index--;
+					current = current.left;
+					left = true;
+				}
+			} else {
+				current = current.left;
+				index--;
+				left = true;
+			}
+		}
+		//Now we are at node from which we insert
+		if(left){
+			current.left = new Node(c, current.left, current, Code.SAME, current, true, true);
+			current.isLeftThreaded = false;
+			current.rank++;
+			current.balance = Code.LEFT;
+		} else {
+			current.right = new Node(c, current, current.right, Code.SAME, current, true, true);
+			current.isRightThreaded = false;
+			current.balance = Code.RIGHT;
+		}
+		while(current != root){
+			if(current.parent == current.right){
+				left = true;
+				second = first;
+				first = -1;
+			} else if (current.parent == current.left){
+				left = false;
+				second = first;
+				first = 1;
+			}
+			current = current.parent;
+			if(left){
+				current.rank++;
+				if(current.balance == Code.RIGHT){
+					current.balance = Code.SAME;
+				} else if(current.balance == Code.SAME){
+					current.balance = Code.LEFT;
+				} else if(current.balance == Code.LEFT){
+					rotate = true;
+					break;
+				}
+			} else{
+				if(current.balance == Code.LEFT){
+					current.balance = Code.SAME;
+				} else if(current.balance == Code.SAME){
+					current.balance = Code.RIGHT;
+				} else if(current.balance == Code.RIGHT){
+					rotate = true;
+					break;
+				}
+			}
+		}
+		//now we are at place of rotation, if any
+		if(rotate){
+		 System.out.println("need a rotation");	
+		}
+		
+	}
+
+	/**
+	 * 
+	 * @return the number of nodes in this tree
+	 */
+	public int size() {
+		return -1; // replace by a real calculation.
+	}
+
+	/**
+	 * 
+	 * @param pos
+	 *            position of character to delete from this tree
+	 * @return the character that is deleted
+	 * @throws IndexOutOfBoundsException
+	 */
+	public char delete(int pos) throws IndexOutOfBoundsException {
+		// Implementation requirement:
+		// When deleting a node with two children, you normally replace the
+		// node to be deleted with either its in-order successor or predecessor.
+		// The tests assume assume that you will replace it with the
+		// *successor*.
+		return '#'; // replace by a real calculation.
+	}
+
+	/**
+	 * This method operates in O(length*log N), where N is the size of this
+	 * tree.
+	 * 
+	 * @param pos
+	 *            location of the beginning of the string to retrieve
+	 * @param length
+	 *            length of the string to retrieve
+	 * @return string of length that starts in position pos
+	 * @throws IndexOutOfBoundsException
+	 *             unless both pos and pos+length-1 are legitimate indexes
+	 *             within this tree.
+	 */
+	public String get(int pos, int length) throws IndexOutOfBoundsException {
+		return "";
+	}
+
+	/**
+	 * This method is provided for you, and should not need to be changed. If
+	 * split() and concatenate() are O(log N) operations as required, delete
+	 * should also be O(log N)
+	 * 
+	 * @param start
+	 *            position of beginning of string to delete
+	 * 
+	 * @param length
+	 *            length of string to delete
+	 * @return an EditTree containing the deleted string
+	 * @throws IndexOutOfBoundsException
+	 *             unless both start and start+length-1 are in range for this
+	 *             tree.
+	 */
+	public EditTree delete(int start, int length)
+			throws IndexOutOfBoundsException {
+		if (start < 0 || start + length >= this.size())
+			throw new IndexOutOfBoundsException(
+					(start < 0) ? "negative first argument to delete"
+							: "delete range extends past end of string");
+		EditTree t2 = this.split(start);
+		EditTree t3 = t2.split(length);
+		this.concatenate(t3);
+		return t2;
+	}
+
+	/**
+	 * Append (in time proportional to the log of the size of the larger tree)
+	 * the contents of the other tree to this one. Other should be made empty
+	 * after this operation.
+	 * 
+	 * @param other
+	 * @throws IllegalArgumentException
+	 *             if this == other
+	 */
+	public void concatenate(EditTree other) throws IllegalArgumentException {
+
+	}
+
+	/**
+	 * This operation must be done in time proportional to the height of this
+	 * tree.
+	 * 
+	 * @param pos
+	 *            where to split this tree
+	 * @return a new tree containing all of the elements of this tree whose
+	 *         positions are >= position. Their nodes are removed from this
+	 *         tree.
+	 * @throws IndexOutOfBoundsException
+	 */
+	public EditTree split(int pos) throws IndexOutOfBoundsException {
+		return null; // replace by a real calculation.
+	}
+
+	/**
+	 * Don't worry if you can't do this one efficiently.
+	 * 
+	 * @param s
+	 *            the string to look for
+	 * @return the position in this tree of the first occurrence of s; -1 if s
+	 *         does not occur
+	 */
+	public int find(String s) {
+		return -2;
+	}
+
+	/**
+	 * 
+	 * @param s
+	 *            the string to search for
+	 * @param pos
+	 *            the position in the tree to begin the search
+	 * @return the position in this tree of the first occurrence of s that does
+	 *         not occur before position pos; -1 if s does not occur
+	 */
+	public int find(String s, int pos) {
+		return -2;
+	}
+
+	/**
+	 * @return The root of this tree.
+	 */
+	public Node getRoot() {
+		return this.root;
+	}
+}

@@ -1,0 +1,649 @@
+package editortrees;
+
+// A node in a height-balanced binary tree with rank.
+// Except for the NULL_sNODE (if you choose to use one), one node cannot
+// belong to two different trees.
+
+/**
+ * Creates and edits Nodes for Editor Trees.
+ * 
+ * @author burchtm, havensd, obrienm Created April 2014.
+ */
+public class Node {
+	public static final Node NULL_NODE = new NullNode();
+
+	enum Code {
+		SAME, LEFT, RIGHT
+	};
+
+	// The fields would normally be private, but for the purposes of this class,
+	// we want to be able to test the results of the algorithms in addition to
+	// the
+	// "publicly visible" effects
+
+	char element;
+	Node left, right;
+	Node parent; // subtrees
+	int rank; // inorder position of this node within its own subtree.
+	int height;
+	int size;
+	Code balance;
+
+	/**
+	 * Constructs a node with the given element and parent.
+	 * 
+	 * @param e
+	 * @param parent
+	 */
+	public Node(char e, Node parent) {
+		this.element = e;
+		this.left = NULL_NODE;
+		this.right = NULL_NODE;
+		this.balance = Code.SAME;
+		this.parent = parent;
+		this.height = 0;
+		this.size = 1;
+		this.rank = 0;
+	}
+
+	/**
+	 * Constructs a node witht the given element.
+	 * 
+	 * @param e
+	 */
+	public Node(char e) {
+		this.element = e;
+		this.left = NULL_NODE;
+		this.right = NULL_NODE;
+		this.balance = Code.SAME;
+		this.parent = NULL_NODE;
+		this.height = 0;
+		this.size = 1;
+		this.rank = 0;
+	}
+
+	/**
+	 * Constructs a NULL_NODE.
+	 * 
+	 */
+	public Node() {
+		this.element = Character.MIN_VALUE;
+		this.rank = Integer.MIN_VALUE;
+		this.size = 0;
+		this.balance = Code.SAME;
+		this.height = -1;
+		this.left = null;
+		this.right = null;
+		this.parent = NULL_NODE;
+	}
+
+	// Node parent; // You may want this field.
+	// Feel free to add other fields that you find useful
+
+	// You will probably want to add several other methods
+
+	// For the following methods, you should fill in the details so that they
+	// work correctly
+	public String toString() {
+		if (this == NULL_NODE) {
+			return "";
+		}
+		return this.left.toString() + this.element + this.right.toString();
+	}
+
+	/**
+	 * Returns the height of the node's subtree
+	 * 
+	 * @return height of the node's subtree
+	 */
+	public int height() {
+		return this.height;
+	}
+
+	/**
+	 * Returns the size of the node
+	 * 
+	 * @return size of the node
+	 */
+	public int size() {
+		return this.size;
+	}
+
+	/**
+	 * Returns a Node at the given index position.
+	 * 
+	 * @param pos
+	 * @return Node at given position
+	 */
+	public Node get(int pos) {
+		if (pos > this.rank) { // go right
+			return this.right.get(pos - rank - 1);
+		} else if (pos < this.rank) { // go left
+			return this.left.get(pos);
+		} else {
+			return this;
+		}
+	}
+
+	/**
+	 * 
+	 * @param length
+	 * @return the string starting at the given position with the given length
+	 */
+	public String getString(int length) {
+		if (length == 0) {
+			return "";
+		}
+		Node current = this;
+		String temp = current.element + ""; // get current character
+		if (current.right != NULL_NODE) { // current has a right child
+			current = current.right;
+			// Iterate all the way left after going right to inorder sucessor
+			while (current.left != NULL_NODE) {
+				current = current.left;
+			}
+			return temp + current.getString(length - 1);
+		} else { // current does not have a right child
+			// Get back up to the node that was branched off of
+			while (current.parent.right == current) {
+				current = current.parent;
+			}
+			return temp + current.parent.getString(length - 1);
+		}
+	}
+
+	/**
+	 * Adds a new node with a given char element at the given index position to
+	 * the Editor Tree.
+	 * 
+	 * @param c
+	 * @param pos
+	 * @param e
+	 */
+	public void add(char c, int pos, EditTree e) {
+		if (pos > this.rank) { // go right
+			if (this.right == NULL_NODE) { // Make a right child
+				this.right = new Node(c, this);
+			} else { // Recurse on the right child
+				this.right.add(c, pos - rank - 1, e);
+			}
+			int rotate = needsRotation();
+			switch (rotate) {
+			case (-2):
+				doubleLeftRotate(this, this.right, this.right.left, e);
+				break;
+			case (-1):
+				singleLeftRotate(this, this.right, e);
+				break;
+			case (0):
+				setFields();
+				break;
+			case (1):
+				singleRightRotate(this, this.left, e);
+				break;
+			case (2):
+				doubleRightRotate(this, this.left, this.left.right, e);
+				break;
+			}
+		} else { // go left
+			if (this.left == NULL_NODE) { // Make a left child
+				this.left = new Node(c, this);
+			} else {
+				this.left.add(c, pos, e); // Recurse on left child
+			}
+			int rotate = needsRotation();
+			switch (rotate) {
+			case (-2):
+				doubleLeftRotate(this, this.right, this.right.left, e);
+				break;
+			case (-1):
+				singleLeftRotate(this, this.right, e);
+				break;
+			case (0):
+				setFields();
+				break;
+			case (1):
+				singleRightRotate(this, this.left, e);
+				break;
+			case (2):
+				doubleRightRotate(this, this.left, this.left.right, e);
+				break;
+			}
+		}
+	}
+
+	/**
+	 * Sets the fields after there is no rotate.
+	 */
+	private void setFields() {
+		this.setHeight();
+		this.setSize();
+		this.setBalance();
+		this.setRank();
+	}
+
+	/**
+	 * Sets the balance of a node.
+	 */
+	private void setBalance() {
+		if (this.left.height > this.right.height) {
+			this.balance = Code.LEFT;
+		} else if (this.left.height < this.right.height) {
+			this.balance = Code.RIGHT;
+		} else {
+			this.balance = Code.SAME;
+		}
+	}
+
+	/**
+	 * Sets the height of a node.
+	 */
+	private void setHeight() {
+		if (this == NULL_NODE) {
+			this.height = -1;
+		}
+		this.height = Math.max(this.left.height, this.right.height) + 1;
+	}
+
+	/**
+	 * Sets the size of a node.
+	 */
+	private void setSize() {
+		this.size = this.left.size + this.right.size + 1;
+	}
+
+	/**
+	 * Sets the rank of a node.
+	 */
+	private void setRank() {
+		this.rank = this.left.size;
+	}
+
+	/**
+	 * Performs a double right rotate at the given node. (Performs single left
+	 * on child and then single right on parent.)
+	 * 
+	 * @param parent
+	 * @param child
+	 * @param grandchild
+	 * @param e
+	 */
+	private void doubleRightRotate(Node parent, Node child, Node grandchild,
+			EditTree e) {
+		singleLeftRotate(child, grandchild, e);
+		singleRightRotate(parent, child, e);
+
+		// Set the fields on the nodes after rotation.
+		grandchild.setFields();
+		child.setFields();
+		parent.setFields();
+	}
+
+	/**
+	 * Performs a single right rotate at the given node.
+	 * 
+	 * @param parent
+	 * @param child
+	 * @param e
+	 */
+	private void singleRightRotate(Node parent, Node child, EditTree e) {
+		// Swap elements in parent and child
+		char parentElement = parent.element;
+		parent.element = child.element;
+		child.element = parentElement;
+		// Swing child over to the right
+		Node childSubtree = child.right;
+		child.right = parent.right;
+		child.right.parent = child;
+		// Suck up child's left to its parent's left
+		parent.left = child.left;
+		child.left.parent = parent;
+		parent.right = child;
+		child.left = childSubtree;
+
+		// Set fields on the appropriate nodes after rotation and increase total
+		// rotation count
+		child.setFields();
+		parent.setFields();
+		e.totalRotationCount++;
+	}
+
+	/**
+	 * Performs a single left rotate at the given node.
+	 * 
+	 * @param parent
+	 * @param child
+	 * @param e
+	 */
+	private void singleLeftRotate(Node parent, Node child, EditTree e) {
+		// Swaps elements in the parent and child
+		char parentElement = parent.element;
+		parent.element = child.element;
+		child.element = parentElement;
+		// Swing child over to the left
+		Node childSubtree = child.left;
+		child.left = parent.left;
+		child.left.parent = child;
+		// Suck up child's right to its parent's right
+		parent.right = child.right;
+		child.right.parent = parent;
+		parent.left = child;
+		child.right = childSubtree;
+
+		// Set fields on the appropriate nodes after rotation and increase total
+		// rotation count
+		child.setFields();
+		parent.setFields();
+		e.totalRotationCount++;
+	}
+
+	/**
+	 * Performs a double left rotate at the given node. (Performs single right
+	 * on child and then single left on parent.)
+	 * 
+	 * @param parent
+	 * @param child
+	 * @param grandchild
+	 * @param e
+	 */
+	private void doubleLeftRotate(Node parent, Node child, Node grandchild,
+			EditTree e) {
+		singleRightRotate(child, grandchild, e);
+		singleLeftRotate(parent, child, e);
+
+		// Set the fields on the nodes after rotation.
+		grandchild.setFields();
+		child.setFields();
+		parent.setFields();
+	}
+
+	/**
+	 * Determines what kind of rotation is needed, if any.
+	 * 
+	 * @return an integer indicating which rotation is needed.
+	 */
+	private int needsRotation() {
+		if (this.left.height - this.right.height > 1) {
+			// rotate right
+			if (this.left.balance == Code.LEFT) {
+				return 1; // single
+			} else {
+				return 2; // double
+			}
+		} else if (this.right.height - this.left.height > 1) {
+			// rotate left
+			if (this.right.balance == Code.RIGHT) {
+				return -1; // single
+			} else {
+				return -2; // double
+			}
+		} else {
+			return 0; // No rotation needed.
+		}
+	}
+
+	/**
+	 * Creates a copy of the given current node from an original Editor Tree.
+	 * 
+	 * @param e
+	 * @param eCurrent
+	 */
+	public void editTreeCopy(Node eCurrent) {
+		// Sets the fields of the current node
+		this.element = eCurrent.element;
+		this.balance = eCurrent.balance;
+		this.height = eCurrent.height;
+		this.rank = eCurrent.rank;
+		this.size = eCurrent.size;
+		// Recurse on the left
+		if (eCurrent.left != Node.NULL_NODE) {
+			this.left = new Node();
+			this.left.editTreeCopy(eCurrent.left);
+		} else {
+			this.left = Node.NULL_NODE;
+		}
+		// Recurse on the right
+		if (eCurrent.right != Node.NULL_NODE) {
+			this.right = new Node();
+			this.right.editTreeCopy(eCurrent.right);
+		} else {
+			this.right = Node.NULL_NODE;
+		}
+		// Set the parent fields
+		this.left.parent = this;
+		this.right.parent = this;
+	}
+
+	/**
+	 * Deletes the given node from the tree.
+	 * 
+	 * @param e
+	 * @return the element of the deleted node
+	 */
+	public char delete(EditTree e) {
+		char element = this.element;
+		if (this.left == NULL_NODE && this.right == NULL_NODE) { // no children
+																	// (LEAF)
+			if (this.parent.left == this) {// node is on left
+				this.parent.left = NULL_NODE;
+				this.parent.left.parent = this.parent;
+			} else if (this.parent.right == this) { // node is on right
+				this.parent.right = NULL_NODE;
+				this.parent.right.parent = this.parent;
+			}
+		} else if (this.left == NULL_NODE ^ this.right == NULL_NODE) { // one
+																		// child
+			if (this.left == NULL_NODE) { // only right child
+				if (this.parent == NULL_NODE) {
+					e.root = this.right;
+				} else if (this.parent.left == this) { // Node is on the left
+					this.parent.left = this.right;
+				} else { // Node is on the right
+					this.parent.right = this.right;
+				}
+			} else { // only left child
+				if (this.parent == NULL_NODE) {
+					e.root = this.left;
+				} else if (this.parent.left == this) { // Node is on the left
+					this.parent.left = this.left;
+				} else { // Node is on the right
+					this.parent.right = this.left;
+				}
+			}
+		} else { // two children
+			// Finds inorder successor
+			Node temp = this.right;
+			while (temp.left != NULL_NODE) {
+				temp = temp.left;
+			}
+			this.element = temp.element;
+			if (this.right.left == NULL_NODE) {
+				this.right = this.right.right;
+				this.right.parent = this;
+			} else {
+				temp.parent.left = temp.right;
+				temp.right.parent = temp.parent;
+			}
+			temp.backTrack(e);
+		}
+
+		// Set all the required fields and returns element
+		e.setTreeSize();
+		this.setFields();
+		this.backTrack(e);
+		return element;
+	}
+
+	/**
+	 * Backtracks up the tree, rotating if necessary.
+	 * 
+	 * @param e
+	 */
+	private void backTrack(EditTree e) {
+		if (this == NULL_NODE) {
+			return;
+		}
+		int rotate = needsRotation();
+		switch (rotate) {
+		case (-2):
+			doubleLeftRotate(this, this.right, this.right.left, e);
+			break;
+		case (-1):
+			singleLeftRotate(this, this.right, e);
+			break;
+		case (0):
+			setFields();
+			break;
+		case (1):
+			singleRightRotate(this, this.left, e);
+			break;
+		case (2):
+			doubleRightRotate(this, this.left, this.left.right, e);
+			break;
+		}
+		this.parent.backTrack(e);
+	}
+
+	/**
+	 * Builds a tree from the given string.
+	 * 
+	 * @param s
+	 */
+	public void buildStringTree(String s) {
+		// Recurse on the left
+		if (!(s.length() == 1)) {
+			this.left = new Node('x');
+			this.left.parent = this;
+			this.left.buildStringTree(s.substring(0, s.length() / 2));
+		}
+
+		// Set the current node's element
+		this.element = s.charAt(s.length() / 2);
+
+		// Recurse on the right
+		if (!(s.length() == 1 || s.charAt(s.length() - 1) == s.charAt(s
+				.length() / 2))) {
+			this.right = new Node('x');
+			this.right.parent = this;
+			this.right.buildStringTree(s.substring(s.length() / 2 + 1,
+					s.length()));
+		}
+
+		// Set fields
+		this.setFields();
+	}
+
+	/**
+	 * Concatenates a Tree with the given root "otherRoot" at the given
+	 * otherNode to the original tree.
+	 * 
+	 * @param otherRoot
+	 * @param otherNode
+	 */
+	public void concatenate(Node otherRoot, Node otherNode) {
+		if (this.height > otherRoot.height()) {
+			// Adjusts the height field for nodes and the recursion goes down
+			// the original tree.
+			if (this.balance == Code.LEFT) {
+				this.height -= 2;
+			} else {
+				this.height--;
+			}
+			// Recurses down the original tree.
+			this.right.concatenate(otherRoot, otherNode);
+		} else {
+			// Case for if we are at the root of the original tree
+			if (this.parent == NULL_NODE) {
+				otherNode.parent.left = NULL_NODE;
+			} else {
+				// Sets the right node of the parent to the node where
+				// concatenation happens. Removes otherNode from subtree and set
+				// otherNode's parent.
+				this.parent.right = otherNode;
+				otherNode.parent.left = NULL_NODE;
+				otherNode.parent = this.parent;
+			}
+			//Checks if the otherNode was the root and sets that node's right and parent if not.
+			if (otherRoot != otherNode) {
+				otherNode.right = otherRoot;
+				otherRoot.parent = otherNode;
+			}
+			otherNode.left = this;
+			this.parent = otherNode;
+			//Sets the new fields of the otherNode, otherRoot, and the balance code of the otherNode's new parent.
+			otherNode.setFields();
+			otherRoot.setFields();
+			otherNode.parent.setBalance();
+		}
+	}
+
+	public EditTree[] split() {
+		Node current = this;
+		// Node currentLeft = current.left;
+		// current.left = NULL_NODE;
+		Node child;
+
+		Node left = null;
+		Node right = null;
+
+		if (current.right != NULL_NODE) {
+			Node temp = current.right;
+			while (temp.left != NULL_NODE) {
+				temp = temp.left;
+			}
+			temp.left = current;
+			current.parent = temp.left;
+			left = current.left;
+			right = current.right;
+			current.left = NULL_NODE;
+			current.right = NULL_NODE;
+		} else {
+			// current = temporary
+		}
+
+		// backtrack up tree
+		boolean Left = false;
+		while (current.parent != Node.NULL_NODE) {
+			child = current;
+			current = current.parent;
+			if (current.left == child) { // came from left
+				if (right != null) {
+					left.concatenate(current.left, right);
+					// * left = current.left;
+					// current.left = right;
+				}
+				Left = true;
+				// right.parent = current;
+				right = null;
+
+			} else { // came from right
+				if (left != null) {
+					right.concatenate(current.right, left);
+					// * right = current.right;
+					// current.right = left;
+				}
+				// left.parent = current;
+				left = null;
+				Left = false;
+			}
+			child.setFields();
+		}
+		current.setFields();
+
+		EditTree leftTree = new EditTree();
+		EditTree rightTree = new EditTree();
+		if (Left) {
+			leftTree.root = current.left;
+			rightTree.root = current;
+		} else {
+			leftTree.root = current;
+			rightTree.root = current.right;
+		}
+
+		EditTree[] trees = new EditTree[2];
+		trees[0] = leftTree;
+		trees[1] = rightTree;
+		return trees;
+	}
+
+}
